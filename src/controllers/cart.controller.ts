@@ -21,24 +21,9 @@ class CartController extends BasicController {
     try {
       const cart = await CartModel.findOne({ userId: `${req.body.userId}` });
       if (cart) {
-        const product = await ProductModel.findById(req.body.productId);
-        await PaymentModel.findOneAndUpdate(
-          { cartId: cart._id },
-          { status: PaymentStatus.CREATED }
-        );
-        if (product) {
-          const productCart = {
-            productId: req.body.productId,
-            quantity: req.body.quantity,
-            total: req.body.quantity * product.price,
-          };
-          cart.products = [...cart.products, productCart];
-          cart.status = CartStatus.ACTIVE;
-          cart.save();
-          return this.successResponse(res, cart);
-        }
+        return this.errorResponse(res, { message: "Cart is already exist" });
       } else {
-        const cart = new CartModel();
+        const cart = new CartModel({ userId: `${req.body.userId}` });
         const payment = new PaymentModel({ cartId: cart._id });
         payment.save();
         const product = await ProductModel.findById(req.body.productId);
@@ -49,7 +34,6 @@ class CartController extends BasicController {
             total: req.body.quantity * product.price,
           };
           cart.products = [...cart.products, productCart];
-          cart.userId = req.body.userId;
           cart.save();
           return this.successResponse(res, cart);
         }

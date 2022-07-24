@@ -1,4 +1,6 @@
-import { Schema, model } from "mongoose";
+import { Schema, model, Types } from "mongoose";
+import ModelMixIn from "../mixIns";
+import { TProduct } from "../types";
 
 const productsSchema = new Schema(
   {
@@ -9,4 +11,9 @@ const productsSchema = new Schema(
   { timestamps: true }
 );
 
-export default model("products", productsSchema);
+class Products extends ModelMixIn<TProduct>("products", productsSchema) {
+  getProductModelById(id: Types.ObjectId) {
+    return this.model.findById(id);
+  }
+}
+export default Products;

@@ -1,44 +1,35 @@
 import { Request, Response } from "express";
 import { BasicController } from "./basic.controller";
-import ProductModel from "../models/products.model";
-import PaymentModel from "../models/payment.model";
-import { PaymentStatus } from "../types";
-import { CartStatus } from "../types";
-import CartModel from "../models/cart.model";
-// import { TProduct, TCart } from "../types";
-
-// const setProductsToCart = (product: TProduct, cart: TCart, req: Request) => {
-//   const productCart = {
-//     productId: req.body.productId,
-//     quantity: req.body.quantity,
-//     total: req.body.quantity * product.price,
-//   };
-//   cart.products = [...cart.products, productCart];
-// };
+import * as yup from "yup";
 
 class CartController extends BasicController {
+  cartCreateSchema: any;
+  constructor(private cartService: any = cartService) {
+    super();
+    this.cartCreateSchema = yup.object().shape({
+      userId: yup.string().required(),
+    });
+  }
+
+  async getCartById(req: Request, res: Response) {
+    try {
+      const cart = await this.cartService.getCartById(req.params.id);
+      return this.successResponse(res, cart);
+    } catch (error) {
+      return this.errorResponse(res, error);
+    }
+  }
+
   async createOrder(req: Request, res: Response) {
     try {
-      const cart = await CartModel.findOne({ userId: `${req.body.userId}` });
-      if (cart) {
-        return this.errorResponse(res, { message: "Cart is already exist" });
-      } else {
-        const cart = new CartModel({ userId: `${req.body.userId}` });
-        const payment = new PaymentModel({ cartId: cart._id });
-        payment.save();
-        const product = await ProductModel.findById(req.body.productId);
-        if (product) {
-          const productCart = {
-            productId: req.body.productId,
-            quantity: req.body.quantity,
-            total: req.body.quantity * product.price,
-          };
-          cart.products = [...cart.products, productCart];
-          cart.save();
-          return this.successResponse(res, cart);
-        }
-      }
-      return this.errorResponse(res, { message: "Product does not exist" });
+      await this.cartCreateSchema.validate(req.body);
+      const { userId, productId, quantity } = req.body;
+      const cart = await this.cartService.createOrder(
+        userId,
+        productId,
+        quantity
+      );
+      return this.successResponse(res, cart);
     } catch (error) {
       return this.errorResponse(res, error);
     }
@@ -46,35 +37,30 @@ class CartController extends BasicController {
 
   async cancelOrder(req: Request, res: Response) {
     try {
-      const cart = await CartModel.findByIdAndUpdate(req.params.id, {
-        products: [],
-        status: CartStatus.DELETED,
-      });
-      await PaymentModel.findOneAndUpdate(
-        {
-          cartId: cart?._id,
-        },
-        { status: PaymentStatus.CANCELED }
-      );
+      const cart = await this.cartService.setDeletedCartStatus(req.params.id);
+      if (!cart) {
+        throw Error("The cart does not exist");
+      }
+      await this.cartService.setCanceledPaymentStatus(cart._id);
       return this.successResponse(res, { message: "Your order was cancelled" });
     } catch (error) {
       return this.errorResponse(res, error);
     }
   }
+
   async updateOrder(req: Request, res: Response) {
     try {
-      const cart = await CartModel.findById(req.params.id);
-      const model = new CartModel(cart);
-      const products = model.products.filter(
-        (product) => product.productId !== req.body.productId
+      const { productId, quantity } = req.body;
+      const cart = await this.cartService.updateOrder(
+        req.params.id,
+        productId,
+        quantity
       );
-      model.set({ products: products });
-      model.save();
-      return this.successResponse(res, model);
+      return this.successResponse(res, cart);
     } catch (error) {
       return this.errorResponse(res, error);
     }
   }
 }
 
-export default new CartController();
+export default CartController;

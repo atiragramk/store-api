@@ -1,7 +1,6 @@
 import { Schema, model, Types } from "mongoose";
-import { PaymentStatus } from "../types";
-
-
+import { PaymentStatus, TPayment } from "../types";
+import ModelMixIn from "../mixIns";
 
 const paymentSchema = new Schema(
   {
@@ -16,4 +15,15 @@ const paymentSchema = new Schema(
   { timestamps: true }
 );
 
-export default model("payment", paymentSchema);
+class Payment extends ModelMixIn<TPayment>("payment", paymentSchema) {
+  setStatusCanceledById(id: string) {
+    return this.model.findOneAndUpdate(
+      { cartId: id },
+      { status: PaymentStatus.CANCELED }
+    );
+  }
+  setStatusDoneById(id: Types.ObjectId) {
+    return this.model.findByIdAndUpdate(id, { status: PaymentStatus.DONE });
+  }
+}
+export default Payment;

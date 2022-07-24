@@ -1,4 +1,6 @@
 import { Schema, model } from "mongoose";
+import { TUser } from "../types";
+import ModelMixIn from "../mixIns";
 
 const userSchema = new Schema(
   {
@@ -17,4 +19,5 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-export default model("user", userSchema);
+class User extends ModelMixIn<TUser>("user", userSchema) {}
+export default User;

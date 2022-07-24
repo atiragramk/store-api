@@ -9,6 +9,6 @@ export class BasicController {
     return formatSuccessResponse(res, data);
   }
   errorResponse(res: Response, error: any, status = 400) {
-    return formatErrorResponse(res, error, status);
+    return formatErrorResponse(res, error.message, status);
   }
 }
